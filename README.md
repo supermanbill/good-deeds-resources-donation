@@ -75,6 +75,8 @@ tests/                      單元測試與整合測試
 
 ## 接上好事道（給 Mason）
 
+完整規格見 [docs/gooddeeds-integration.md](docs/gooddeeds-integration.md)。
+
 1. 在 `src/lib/gooddeeds/index.ts` 實作 `LiveGoodDeeds`：
    - `loginUrl()`：好事道 OAuth 或 SSO 登入網址
    - `sendChat()`：送訊息到好事道聊天；`threadKey` 用來把同一筆捐贈或需求的訊息放在同一個對話串
