@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #e1f5ee;
+  --color-brand-100: #9fe1cb;
+  --color-brand-600: #0f6e56;
+  --color-brand-700: #085041;
+  --color-brand-900: #04342c;
+  --font-sans: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+}
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--color-stone-200);
+  }
+}
+
+body {
+  @apply bg-stone-50 text-stone-900 antialiased;
+}
+
+.card {
+  @apply rounded-xl border border-stone-200 bg-white p-5;
+}
+.btn {
+  @apply inline-flex items-center justify-center rounded-lg bg-brand-600 px-4 py-2 font-medium text-white hover:bg-brand-700 disabled:opacity-50;
+}
+.btn-outline {
+  @apply inline-flex items-center justify-center rounded-lg border border-brand-600 px-4 py-2 font-medium text-brand-700 hover:bg-brand-50;
+}
+.btn-danger {
+  @apply inline-flex items-center justify-center rounded-lg bg-red-700 px-4 py-2 font-medium text-white hover:bg-red-800;
+}
+.input {
+  @apply w-full rounded-lg border border-stone-300 bg-white px-3 py-2 focus:border-brand-600 focus:outline-none;
+}
+.label {
+  @apply mb-1 block text-sm font-medium text-stone-700;
+}
+.badge {
+  @apply inline-block rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-700;
+}
+.muted {
+  @apply text-sm text-stone-500;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}

@@ -1,0 +1,355 @@
+// 好事道物資捐贈媒合平台 資料模型
+// 開發用 SQLite；正式環境把 provider 改成 "postgresql"。
+// SQLite 不支援 enum 與陣列，狀態以字串儲存（合法值見 src/lib/status.ts），
+// 清單欄位以 JSON 字串儲存。
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// 好事道會員（帳號由好事道管理，這裡只存對應與快取資料）
+model User {
+  id          String   @id @default(cuid())
+  goodDeedsId String   @unique
+  name        String
+  email       String?
+  phone       String?
+  /// member | admin（好事公益協會平台管理員）
+  role        String   @default("member")
+  orgId       String?
+  org         Organization? @relation(fields: [orgId], references: [id])
+  createdAt   DateTime @default(now())
+
+  partnerMemberships PartnerMember[]
+  donations          Donation[]
+  needs              Need[]
+  proofs             Proof[]
+  chatMessages       ChatMessage[]
+}
+
+/// 企業、教會、NGO、村辦、個人家庭
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  /// company | church | ngo | village | household
+  type      String
+  verified  Boolean  @default(false)
+  address   String?
+  phone     String?
+  createdAt DateTime @default(now())
+
+  members User[]
+  needs   Need[]
+}
+
+/// 執行夥伴（荃安是第一筆，不寫死）
+model Partner {
+  id            String  @id @default(cuid())
+  slug          String  @unique
+  name          String
+  contactName   String
+  contactPhone  String
+  contactEmail  String?
+  active        Boolean @default(true)
+  /// own_fleet（自家車隊）| outsourced（委外搬家公司）| none（不提供到府）
+  pickupMode    String  @default("none")
+  pickupNote    String?
+  pickupFeeNote String?
+  /// JSON 字串陣列：可到府收貨的縣市
+  serviceAreas  String  @default("[]")
+  /// JSON 字串陣列：可配送的地區
+  deliveryAreas String  @default("[]")
+  /// 數字越小越優先分派
+  priority      Int     @default(100)
+  createdAt     DateTime @default(now())
+
+  depots     Depot[]
+  members    PartnerMember[]
+  categories PartnerCategory[]
+  donations  Donation[]
+}
+
+model PartnerMember {
+  id        String  @id @default(cuid())
+  partnerId String
+  userId    String
+  /// manager | reviewer | driver
+  role      String
+  partner   Partner @relation(fields: [partnerId], references: [id])
+  user      User    @relation(fields: [userId], references: [id])
+
+  @@unique([partnerId, userId])
+}
+
+/// 集貨點／倉庫
+model Depot {
+  id        String  @id @default(cuid())
+  partnerId String
+  name      String
+  address   String
+  county    String
+  hours     String?
+  active    Boolean @default(true)
+  partner   Partner @relation(fields: [partnerId], references: [id])
+
+  donations Donation[]
+  inventory InventoryUnit[]
+}
+
+/// 物資品類（規則定義在 src/lib/categories.ts，slug 對應）
+model Category {
+  id     String  @id @default(cuid())
+  slug   String  @unique
+  name   String
+  active Boolean @default(true)
+  sort   Int     @default(0)
+
+  partners    PartnerCategory[]
+  donationIts DonationItem[]
+  needItems   NeedItem[]
+}
+
+model PartnerCategory {
+  partnerId  String
+  categoryId String
+  partner    Partner  @relation(fields: [partnerId], references: [id])
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  @@id([partnerId, categoryId])
+}
+
+/// 專案活動（例如聖誕禮物送偏鄉）
+model Campaign {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  summary     String
+  description String
+  startsAt    DateTime
+  endsAt      DateTime
+  /// draft | open | closed
+  status      String   @default("draft")
+  /// JSON：[{ amount, label }]
+  donationTiers String @default("[]")
+  createdAt   DateTime @default(now())
+
+  donations Donation[]
+  needs     Need[]
+}
+
+/// 捐贈單
+model Donation {
+  id            String   @id @default(cuid())
+  code          String   @unique
+  donorId       String
+  donor         User     @relation(fields: [donorId], references: [id])
+  /// individual | company
+  donorType     String
+  contactName   String
+  contactPhone  String
+  contactEmail  String?
+  pickupAddress String?
+  pickupCounty  String?
+  /// yes | no | unknown
+  hasElevator   String   @default("unknown")
+  groundSteps   String   @default("unknown")
+  floor         String?
+  /// self_dropoff | pickup
+  logistics     String
+  depotId       String?
+  depot         Depot?   @relation(fields: [depotId], references: [id])
+  partnerId     String?
+  partner       Partner? @relation(fields: [partnerId], references: [id])
+  /// 見 src/lib/status.ts DONATION_STATUSES
+  status        String   @default("submitted")
+  rejectReason  String?
+  reviewNote    String?
+  campaignId    String?
+  campaign      Campaign? @relation(fields: [campaignId], references: [id])
+  showOnWall    Boolean  @default(false)
+  wantsReceipt  Boolean  @default(false)
+  agreedTerms   Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  items DonationItem[]
+}
+
+model DonationItem {
+  id          String    @id @default(cuid())
+  donationId  String
+  donation    Donation  @relation(fields: [donationId], references: [id])
+  categoryId  String
+  category    Category  @relation(fields: [categoryId], references: [id])
+  name        String
+  quantity    Int
+  unit        String
+  condition   String?
+  /// 使用年限（傢俱）
+  usageYears  String?
+  /// 有效期限（即期品）
+  expiryDate  DateTime?
+  /// JSON：品類要求的確認事項，例如 { ambient: true, working: true }
+  confirmations String  @default("{}")
+  /// 認領的許願品項
+  needItemId  String?
+  needItem    NeedItem? @relation(fields: [needItemId], references: [id])
+
+  photos    Photo[]
+  matches   Match[]
+  inventory InventoryUnit[]
+}
+
+model Photo {
+  id             String        @id @default(cuid())
+  fileName       String        @unique
+  mimeType       String
+  /// item | proof
+  kind           String
+  donationItemId String?
+  donationItem   DonationItem? @relation(fields: [donationItemId], references: [id])
+  proofId        String?
+  proof          Proof?        @relation(fields: [proofId], references: [id])
+  createdAt      DateTime      @default(now())
+}
+
+/// 需求單：活動申請（campaign）或許願（wish）
+model Need {
+  id              String    @id @default(cuid())
+  code            String    @unique
+  /// wish | campaign
+  type            String
+  orgId           String
+  org             Organization @relation(fields: [orgId], references: [id])
+  requesterId     String
+  requester       User      @relation(fields: [requesterId], references: [id])
+  campaignId      String?
+  campaign        Campaign? @relation(fields: [campaignId], references: [id])
+  title           String
+  description     String
+  /// once | monthly | quarterly
+  frequency       String    @default("once")
+  deadline        DateTime?
+  /// 見 src/lib/status.ts NEED_STATUSES
+  status          String    @default("submitted")
+  rejectReason    String?
+  peopleCount     Int?
+  unitAddress     String
+  deliveryAddress String
+  deliveryCounty  String
+  addressNote     String?
+  lat             Float?
+  lng             Float?
+  mobile          String
+  landline        String?
+  siteContactName  String?
+  siteContactPhone String?
+  /// yes | no | unknown
+  truckAccess     String    @default("unknown")
+  receiveHours    String?
+  latestArrival   DateTime?
+  transitHub      Boolean   @default(false)
+  /// 定期需求下次需要重新確認的日期
+  nextReviewAt    DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  items  NeedItem[]
+  proofs Proof[]
+}
+
+model NeedItem {
+  id         String   @id @default(cuid())
+  needId     String
+  need       Need     @relation(fields: [needId], references: [id])
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+  name       String
+  quantity   Int
+  unit       String
+  fulfilled  Int      @default(0)
+
+  matches       Match[]
+  donationItems DonationItem[]
+  inventory     InventoryUnit[]
+}
+
+/// 媒合：一筆捐贈品項可拆給多個需求，一個需求可由多筆捐贈湊齊
+model Match {
+  id             String       @id @default(cuid())
+  donationItemId String
+  donationItem   DonationItem @relation(fields: [donationItemId], references: [id])
+  needItemId     String
+  needItem       NeedItem     @relation(fields: [needItemId], references: [id])
+  quantity       Int
+  createdAt      DateTime     @default(now())
+}
+
+/// 入倉後的庫存單位，一箱／一件一個 QR 碼
+model InventoryUnit {
+  id             String       @id @default(cuid())
+  code           String       @unique
+  donationItemId String
+  donationItem   DonationItem @relation(fields: [donationItemId], references: [id])
+  depotId        String
+  depot          Depot        @relation(fields: [depotId], references: [id])
+  needItemId     String?
+  needItem       NeedItem?    @relation(fields: [needItemId], references: [id])
+  /// in_stock | allocated | shipped | delivered
+  status         String       @default("in_stock")
+  createdAt      DateTime     @default(now())
+  deliveredAt    DateTime?
+}
+
+/// 責信紀錄：收貨確認、發放回報
+model Proof {
+  id             String   @id @default(cuid())
+  needId         String
+  need           Need     @relation(fields: [needId], references: [id])
+  /// received | distributed
+  kind           String
+  note           String?
+  householdCount Int?
+  occasion       String?
+  uploadedById   String
+  uploadedBy     User     @relation(fields: [uploadedById], references: [id])
+  /// 由執行夥伴代傳
+  onBehalf       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  photos Photo[]
+}
+
+/// 狀態變更紀錄（捐贈單、需求單共用）
+model StatusEvent {
+  id         String   @id @default(cuid())
+  entityType String
+  entityId   String
+  fromStatus String?
+  toStatus   String
+  note       String?
+  actorId    String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+}
+
+/// 好事道聊天訊息的本地紀錄（mock 模式下即為收件匣）
+model ChatMessage {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  threadKey String
+  body      String
+  readAt    DateTime?
+  /// 已提醒改打電話
+  fallbackFlaggedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, readAt])
+}
