@@ -70,7 +70,7 @@ export default async function DonatePage({
       <details className="card text-sm text-stone-600">
         <summary className="cursor-pointer font-medium text-stone-800">捐物收據說明</summary>
         <p className="mt-2">
-          依國稅局規定，實物捐贈開立「捐物收據」，只載明物資的品項與數量，不註明物資價值。若有報稅需求，請保留購買時的發票或收據，報稅時與捐物收據一起檢附。
+          捐物收據由執行夥伴（荃安）開立。依國稅局規定，實物捐贈的「捐物收據」只載明物資的品項與數量，不註明物資價值。若有報稅需求，請保留購買時的發票或收據，報稅時與捐物收據一起檢附。
         </p>
       </details>
     </div>

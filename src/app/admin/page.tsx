@@ -6,7 +6,7 @@ import { addDepot, addPartnerMember, createPartner, reviewNeed, runRecurringChec
 
 export const dynamic = "force-dynamic";
 
-const PICKUP: Record<string, string> = { own_fleet: "自家車隊", outsourced: "委外搬家公司", none: "不提供到府" };
+const PICKUP: Record<string, string> = { own_fleet: "自家車隊", outsourced: "委外貨運行", none: "不提供到府" };
 const ORG: Record<string, string> = { church: "教會", ngo: "NGO", village: "村辦", household: "個人家庭", company: "企業" };
 
 export default async function AdminPage() {
@@ -161,7 +161,7 @@ export default async function AdminPage() {
             <select name="pickupMode" className="input">
               <option value="none">不提供到府收貨</option>
               <option value="own_fleet">自家車隊到府</option>
-              <option value="outsourced">委外搬家公司到府</option>
+              <option value="outsourced">委外貨運行到府</option>
             </select>
             <input name="serviceAreas" className="input" placeholder="到府範圍縣市，用頓號分隔" />
             <input name="pickupNote" className="input" placeholder="到府說明" />
