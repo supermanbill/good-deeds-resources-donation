@@ -34,7 +34,7 @@ async function main() {
       deliveryAreas: JSON.stringify(["花蓮縣", "台東縣", "宜蘭縣"]),
       priority: 10,
       depots: {
-        create: [{ name: "桃園八德倉庫", address: "桃園市八德區和強路135之7號", county: "桃園市", hours: "週一至週六 09:00–17:00（請先預約）" }],
+        create: [{ name: "桃園八德倉庫", address: "桃園市八德區和強路135之7號", county: "桃園市", hours: "收貨時段待荃安確認（請先預約）" }],
       },
       categories: { create: cats.map((c) => ({ categoryId: catId(c.slug) })) },
     },
